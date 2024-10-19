@@ -1,0 +1,6 @@
+class SchoolNotFoundError(Exception):
+    ...
+
+
+class SubjectNotFound(Exception):
+    ...
