@@ -11,3 +11,5 @@ async def schools_in_region(url: str, user_id: int):
     async with aiofiles.open(f'{user_id}.txt', 'a', encoding='utf-8') as f:
         for school in schools:    
             await f.write(school['shortName'] + '\n')
+    
+    return schools

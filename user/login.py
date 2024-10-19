@@ -7,9 +7,11 @@ from aiogram.fsm.state import State, StatesGroup
 from keyboards.main import base_keyb
 from classes.user import User
 from other.utils import schools_in_region
+from other.middlewares import SchoolMiddlware
 
 
 router = Router(name=__name__)
+router.message.middleware(SchoolMiddlware())
 
 
 class UserForm(StatesGroup):
@@ -48,23 +50,44 @@ async def url_get(message: Message, state: FSMContext):
     await state.update_data(url=message.text)
     
     try:
-        await schools_in_region(message.text, message.from_user.id)
+        schools = await schools_in_region(message.text, message.from_user.id)
+        await state.update_data(schools=schools)
     except Exception:
         await message.answer(
             text='Вы ввели не корректный URL! Введите корректный URL или обратитесь в поддержку'
         )
         await state.set_state(UserForm.url)
     else:
+        await state.set_state(UserForm.school)
+        
         async with ChatActionSender.upload_document(chat_id=message.chat.id, bot=message.bot):
             await message.bot.send_document(
                 chat_id=message.chat.id,
                 document=FSInputFile(f'{message.from_user.id}.txt')
                 )
+        os.remove(f'{message.from_user.id}.txt')
             
         await message.answer(
             text='''
-Отлично, теперь введи свою школу из файла которые доступны в твоём регионе.
+Отлично, теперь введи свою школу из файла. В файле все школы твоего региона.
 Копируй школу полностью без изменений!'''
         )
-    await state.set_state(UserForm.school)
-    os.remove(f'{message.from_user.id}.txt')
+        
+
+@router.message(UserForm.school)
+async def get_school(message: Message, state: FSMContext, school: str):
+    state_data = await state.get_data()
+    
+    await message.answer(
+        text=school
+    )
+        
+    for school in state_data['schools']:
+        if school['shortName'] == message.text:
+            break
+        await state.update_data(school=school)
+    else:
+        await message.answer(
+            text='Вы ввели не корректную школу. Введите школу корректно!'
+        )
+        await state.set_state(UserForm.school)
