@@ -1,5 +1,5 @@
 from hashlib import md5
-from other.constants import *
+from other.constants import DAYS
 import requests
 from errors import SchoolNotFoundError
 
