@@ -1,7 +1,6 @@
 from hashlib import md5
-from other.constants import DAYS
 import requests
-from errors import SchoolNotFoundError
+from .errors import SchoolNotFoundError
 
 
 class NetSchoolApi:

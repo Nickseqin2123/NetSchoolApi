@@ -1,13 +1,31 @@
 from pprint import pprint
 from datetime import date, timedelta, datetime
 from classes.netschool import NetSchoolApi
-from errors import SubjectNotFound
+from .errors import SubjectNotFound
 
 
 class User(NetSchoolApi):
+    __instance = None
     
-    def __init__(self, url, school, login, password):
-        super().__init__(url, school, login, password)
+    def __new__(cls, *args, **kwargs):
+        if cls.__instance is None:
+            cls.__instance = super().__new__(cls)
+        
+        return cls.__instance
+    
+    def __init__(self, url: str = None, school: str = None, login: str = None, password: str = None):
+        if (hasattr(self, 'url') and hasattr(self, 'school') and hasattr(self, '_NetSchoolApi__login') and hasattr(self, '_NetSchoolApi__password')) is False:
+            if all((url, school, password, login)):
+                super().__init__(url, school, login, password)
+            else:
+                raise TypeError('Не переданы все параметры')
+        
+    def raise_error(self):
+        raise TypeError
+    
+    @classmethod
+    def instance(cls):
+        return bool(cls.__instance)
     
     def currentweek_correct(self, start: str = None, end: str = None) -> tuple[str, str]:
         """
@@ -82,7 +100,8 @@ class User(NetSchoolApi):
         initfilters_req = self._session.post(f'{self.url}/webapi/v2/reports/studentgrades/initfilters', json=data, headers=self.headers)
         
 
-user = User('https://net-school.cap.ru', 'МБОУ "СОШ № 30" г. Чебоксары', 'ГригорьевН29', 'NekitVip123')
-user.login()
-user.subject_mark('Алгебра')
-user.logout()
+# user = User('https://net-school.cap.ru', 'МБОУ "СОШ № 30" г. Чебоксары', 'ГригорьевН29', 'NekitVip123')
+# # user.login()
+# # user.subject_mark('Алгебра')
+# # user.logout()
+# user1 = User()

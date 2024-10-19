@@ -3,15 +3,30 @@ import logging
 
 from aiogram import F, Bot, Dispatcher
 from aiogram.types import Message
+from aiogram.filters.command import CommandStart
+from main_router import router as main_router
+from keyboards.main import base_keyb
+from classes.user import User
 
 
 dp = Dispatcher()
+dp.include_router(
+    main_router
+)
 
 
-@dp.message()
+@dp.message(CommandStart())
 async def go(message: Message):
-    await message.reply(
-        text=message.text
+    if User.instance():
+        buttons = ('Дневник', 'Выход', 'Поддержка')
+    else:
+        buttons = ('Войти', 'Поддержка')
+    
+    await message.answer(
+        text='''
+Привет! Это бот "Сетевой Город" в телеграме! Здесь ты можешь получить оценки за неделю.
+Бот будет обновляться и в него будут добавляться новые и удобные функции''',
+reply_markup=await base_keyb(*buttons)
     )
 
 
