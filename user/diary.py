@@ -32,7 +32,7 @@ async def callback_yes(callback: CallbackQuery, state: FSMContext):
     await callback.message.delete()
     user = User()
     diary: dict = user.diary()
-    finall_data = convert_and_set_in_dict(diary['weekDays'])
+    finall_data = convert_and_set_in_dict(diary['message']['weekDays'])
     
     for day in diary_print(finall_data):
         await callback.message.answer(
