@@ -1,9 +1,16 @@
 from hashlib import md5
 import requests
-from .errors import SchoolNotFoundError
 
 
 class NetSchoolApi:
+    __instance = None
+    
+    def __new__(cls, *args, **kwargs):
+        if cls.__instance is None:
+            cls.__instance = super().__new__(cls)
+        
+        return cls.__instance
+    
     def __init__(self, url: str, school: str, login: str, password: str) -> None:
         self.url = url
         self.school = school
@@ -11,21 +18,24 @@ class NetSchoolApi:
         self.__password = password
         self.headers = {}
     
-    def login(self) -> None:
+    def login(self) -> dict:
         self._session = requests.Session()
         self._school_id()
         
-        req: dict = self._session.post(f'{self.url}/webapi/auth/getdata')
+        req = self._session.post(f'{self.url}/webapi/auth/getdata')
+        
         data: dict = self._config(req.json())
         response_login = self._session.post(f'{self.url}/webapi/login', data=data)
-            
+    
         result = response_login.json()
             
         if 'at' not in result:
-            print('Ошибка логина')
-            return
+            self.__class__.__instance = None
+            return {'status': False, 'messag': 'Ошибка входа. Проверьте логин и пароль.'}
         
         self._make_attrs(result)
+        # self.logout()
+        return {'status': True, 'messag': 'Вход прошёл успешно'}
         
     def _school_id(self) -> int:
         schools = self._session.get(f'{self.url}/webapi/schools/search')
@@ -34,8 +44,6 @@ class NetSchoolApi:
             if self.school == i['shortName']:
                 self.school_id = i['id']
                 break
-        else:
-            raise SchoolNotFoundError('Школа не найдена! Проверьте название школы из файла!')
     
     def make_query_parametrs(self, url: str, **kwargs) -> str:
         params = [f'{key}={value}' for key, value in kwargs.items()]
@@ -89,3 +97,7 @@ class NetSchoolApi:
     def logout(self) -> None:
         self._session.post(f'{self.url}/webapi/auth/logout', headers=self.headers)
         self._session.close()
+    
+    @classmethod
+    def instance(cls):
+        return bool(cls.__instance)

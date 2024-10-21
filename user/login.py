@@ -41,7 +41,7 @@ async def main_menu(message: Message, state: FSMContext):
     
     await message.answer(
         text='Мы в меню',
-        reply_markup=await base_keyb('Вход', 'Поддержка')
+        reply_markup=await base_keyb('Войти', 'Поддержка')
     )
 
 
@@ -75,19 +75,65 @@ async def url_get(message: Message, state: FSMContext):
         
 
 @router.message(UserForm.school)
-async def get_school(message: Message, state: FSMContext, school: str):
+async def get_school(message: Message, state: FSMContext, school: str): # school - см. в мидлварь
     state_data = await state.get_data()
     
-    await message.answer(
-        text=school
-    )
-        
     for school in state_data['schools']:
         if school['shortName'] == message.text:
+            await state.update_data(school=school['shortName'])
+            await state.set_state(UserForm.login)
+                
+            await message.answer(
+                text='Отлично, теперь введи свой логин'
+        )
             break
-        await state.update_data(school=school)
     else:
         await message.answer(
             text='Вы ввели не корректную школу. Введите школу корректно!'
         )
-        await state.set_state(UserForm.school)
+        await state.set_state(UserForm.school) 
+        
+
+@router.message(UserForm.login)
+async def get_login(message: Message, state: FSMContext):
+    await state.update_data(login=message.text)
+    await state.set_state(UserForm.password)
+    
+    await message.answer(
+        text='Почти все. Осталось ввести пароль'
+    )
+
+
+@router.message(UserForm.password)
+async def get_password(message: Message, state: FSMContext):
+    await state.update_data(password=message.text)
+    
+    data: dict = await state.get_data()
+    data.pop('schools')
+    
+    await summary(message, state, data)
+
+
+async def summary(message: Message, state: FSMContext, data: dict):
+    url, school, login, password = data.values()
+    
+    user = User(url=url, school=school, login=login, password=password)
+    await message.answer(
+        text='Произвожу вход в профиль...'
+    )
+    status, messag = user.login().values()
+    
+    if status:
+        await state.clear()
+        await message.answer(
+            text=messag,
+            reply_markup=await base_keyb('Дневник', 'Выход', 'Поддержка')
+        )
+    else:
+        await message.answer(
+            text=f'{messag}'
+        )
+        await message.answer(
+            text='Введите логин'
+        )
+        await state.set_state(UserForm.login)

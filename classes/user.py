@@ -1,39 +1,21 @@
-from pprint import pprint
 from datetime import date, timedelta, datetime
-from classes.netschool import NetSchoolApi
-from .errors import SubjectNotFound
+from .netschool import NetSchoolApi
 
 
 class User(NetSchoolApi):
-    __instance = None
-    
-    def __new__(cls, *args, **kwargs):
-        if cls.__instance is None:
-            cls.__instance = super().__new__(cls)
-        
-        return cls.__instance
     
     def __init__(self, url: str = None, school: str = None, login: str = None, password: str = None):
         if (hasattr(self, 'url') and hasattr(self, 'school') and hasattr(self, '_NetSchoolApi__login') and hasattr(self, '_NetSchoolApi__password')) is False:
             if all((url, school, password, login)):
                 super().__init__(url, school, login, password)
             else:
-                raise TypeError('Не переданы все параметры')
-        
-    def raise_error(self):
-        raise TypeError
+                raise TypeError
     
-    @classmethod
-    def instance(cls):
-        return bool(cls.__instance)
-    
-    def currentweek_correct(self, start: str = None, end: str = None) -> tuple[str, str]:
+    def currentweek_correct(self, start: str = None) -> tuple[str, str]:
         """
         
         Args:
             start (str, 'Y-M-D'): Год-Месяц-День.
-            end (str, 'Y-M-D'): Год-Месяц-День.
-
         Returns:
             tuple: Кортеж с датами в формате (Начало недели, Конец недели)
         """
@@ -41,26 +23,22 @@ class User(NetSchoolApi):
             monday = date.today() - timedelta(days=date.today().weekday())
             start = monday
         else:
-            if datetime.strptime(start, "%Y-%m-%d").weekday() == 0:
+            dt = datetime.strptime(start, "%Y-%m-%d")
+            
+            if dt.weekday() == 0 and dt.year == datetime.now().year:
                 start = date.fromisoformat(start)
             else:
-                return 'Начало недели не верно!', 0
+                return {'message': 'Начало недели или год не верен!', 'status': False}
         
-        if not end:
-            end = start + timedelta(days=6)
-        else:
-            if datetime.strptime(end, "%Y-%m-%d").weekday() == 6:
-                end = date.fromisoformat(end)
-            else:
-                return 'Конец недели не верен!', 0
-    
-        return start.isoformat(), end.isoformat()
+        end = start + timedelta(days=6)
+
+        return {'data': (start.isoformat(), end.isoformat()), 'status': True}
         
-    def diary(self, start: str = None, end: str = None) -> dict:
-        date = self.currentweek_correct(start, end)
+    def diary(self, start: str = None) -> dict:
+        date: dict = self.currentweek_correct(start)
         
-        if all(date):
-            start, end = date
+        if date['status']:
+            start, end = date['data']
             
             data: dict = {
                 'schoolId': self.school_id,
@@ -71,37 +49,41 @@ class User(NetSchoolApi):
             }
             url = self.make_query_parametrs('https://net-school.cap.ru/webapi/student/diary', **data)
             
-            response = self._session.get(url, headers=self.headers)
-            result: dict = response.json()
+            try:
+                response = self._session.get(url, headers=self.headers)
+                result: dict = response.json()
+            except Exception:
+                if self.login()['status']:
+                    response = self._session.get(url, headers=self.headers)
+                    result: dict = response.json()
+                
+            return {'message': result, 'status': True}
             
-            return result
-            
-        return date[0]
+        return date
     
-    def subject_mark(self, name: str):
-        req = self._session.get(f'{self.url}/webapi/v2/reports/studentgrades', headers=self.headers)
-        result = req.json()['filterSources']
+    # def subject_mark(self, name: str):
+    #     req = self._session.get(f'{self.url}/webapi/v2/reports/studentgrades', headers=self.headers)
+    #     result = req.json()['filterSources']
         
-        result_first = result[1]
-        subjects_num_dict = result[2]
+    #     result_first = result[1]
+    #     subjects_num_dict = result[2]
         
-        class_id = result_first['defaultValue']
-        class_name = result_first['items'][0].get('title')
+    #     class_id = result_first['defaultValue']
+    #     class_name = result_first['items'][0].get('title')
         
-        for i in subjects_num_dict['items']:
-            if i['title'] == name:
-                subject = i['title']
-                subject_id = i['value']
-                break
-        else:
-            raise SubjectNotFound('Предмет не найден! Проверьте его название!')
+    #     for i in subjects_num_dict['items']:
+    #         if i['title'] == name:
+    #             subject = i['title']
+    #             subject_id = i['value']
+    #             break
+    #     else:
+    #         raise SubjectNotFound('Предмет не найден! Проверьте его название!')
         
-        data: dict = self._config_mark(class_name=class_name, class_id=class_id, subject=subject, subject_id=subject_id)
-        initfilters_req = self._session.post(f'{self.url}/webapi/v2/reports/studentgrades/initfilters', json=data, headers=self.headers)
-        
+    #     data: dict = self._config_mark(class_name=class_name, class_id=class_id, subject=subject, subject_id=subject_id)
+    #     initfilters_req = self._session.post(f'{self.url}/webapi/v2/reports/studentgrades/initfilters', json=data, headers=self.headers)
 
-# user = User('https://net-school.cap.ru', 'МБОУ "СОШ № 30" г. Чебоксары', 'ГригорьевН29', 'NekitVip123')
-# # user.login()
-# # user.subject_mark('Алгебра')
-# # user.logout()
-# user1 = User()
+
+# user = User('https://net-school.cap.ru/', 'МБОУ "СОШ № 30" г. Чебоксары', 'ГригорьевН29', 'NekitVip123')
+# user.login()
+# print(user.diary('2024-10-14'))
+# user.logout()

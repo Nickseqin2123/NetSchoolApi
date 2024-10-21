@@ -48,20 +48,20 @@ def diary_print(data: dict) -> Generator:
 {day}\n'''
 
 
-def main():
-    url = input('Введите url сайта: ')
-    school = input('Введите свою школу: ')
-    login = input('Введите свой логин: ')
-    password = input('Введите свой пароль: ')
-    user = User(url, school, login, password)
+# def main():
+#     url = input('Введите url сайта: ')
+#     school = input('Введите свою школу: ')
+#     login = input('Введите свой логин: ')
+#     password = input('Введите свой пароль: ')
+#     user = User(url, school, login, password)
     
-    user.login()
-    src: dict = user.diary('2024-10-14')
-    user.logout()
-    data: dict = convert_and_set_in_dict(src['weekDays'])
+#     user.login()
+#     src: dict = user.diary('2024-10-14')
+#     user.logout()
+#     data: dict = convert_and_set_in_dict(src['weekDays'])
     
-    for i in diary_print(data):
-        print(i)
+#     for i in diary_print(data):
+#         print(i)
 
 
-main()
+# main()
