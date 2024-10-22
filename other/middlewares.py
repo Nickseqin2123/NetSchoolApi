@@ -1,5 +1,3 @@
-from pprint import pprint
-
 from typing import Any, Callable, Dict, Awaitable
 from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject

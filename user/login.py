@@ -1,4 +1,6 @@
 import os
+from typing import Coroutine
+
 from aiogram import F, Router
 from aiogram.utils.chat_action import ChatActionSender
 from aiogram.types import Message, FSInputFile
@@ -22,7 +24,7 @@ class UserForm(StatesGroup):
 
 
 @router.message(F.text == 'Войти', F.func(lambda _: User.instance() is False))
-async def start_login(message: Message, state: FSMContext):
+async def start_login(message: Message, state: FSMContext) -> Coroutine:
     await state.set_state(UserForm.url)
     await message.answer(
         text='Так, для начала введи URL сайта сетевого города без последнего символа "/"',
@@ -31,7 +33,7 @@ async def start_login(message: Message, state: FSMContext):
 
 
 @router.message(F.text == 'Главное меню')
-async def main_menu(message: Message, state: FSMContext):
+async def main_menu(message: Message, state: FSMContext) -> Coroutine|None:
     current_state = await state.get_state()
     
     if current_state is None:
@@ -46,7 +48,7 @@ async def main_menu(message: Message, state: FSMContext):
 
 
 @router.message(UserForm.url)
-async def url_get(message: Message, state: FSMContext):
+async def url_get(message: Message, state: FSMContext) -> Coroutine:
     await state.update_data(url=message.text)
     
     try:
@@ -75,7 +77,7 @@ async def url_get(message: Message, state: FSMContext):
         
 
 @router.message(UserForm.school)
-async def get_school(message: Message, state: FSMContext, school: str): # school - см. в мидлварь
+async def get_school(message: Message, state: FSMContext, school: str) -> Coroutine: # school - см. в мидлварь
     state_data = await state.get_data()
     
     for school in state_data['schools']:
@@ -95,7 +97,7 @@ async def get_school(message: Message, state: FSMContext, school: str): # school
         
 
 @router.message(UserForm.login)
-async def get_login(message: Message, state: FSMContext):
+async def get_login(message: Message, state: FSMContext) -> Coroutine:
     await state.update_data(login=message.text)
     await state.set_state(UserForm.password)
     
@@ -105,7 +107,7 @@ async def get_login(message: Message, state: FSMContext):
 
 
 @router.message(UserForm.password)
-async def get_password(message: Message, state: FSMContext):
+async def get_password(message: Message, state: FSMContext) -> Coroutine:
     await state.update_data(password=message.text)
     
     data: dict = await state.get_data()
@@ -114,14 +116,15 @@ async def get_password(message: Message, state: FSMContext):
     await summary(message, state, data)
 
 
-async def summary(message: Message, state: FSMContext, data: dict):
+async def summary(message: Message, state: FSMContext, data: dict) -> Coroutine:
     url, school, login, password = data.values()
     
     user = User(url=url, school=school, login=login, password=password)
     await message.answer(
         text='Произвожу вход в профиль...'
     )
-    status, messag = user.login().values()
+    response: dict = await user.login()
+    status, messag = response.values()
     
     if status:
         await state.clear()

@@ -1,7 +1,8 @@
+from aiogram.types import InlineKeyboardMarkup, ReplyKeyboardMarkup
 from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 
 
-async def base_keyb(*args):
+async def base_keyb(*args) -> ReplyKeyboardMarkup:
     builder = ReplyKeyboardBuilder()
     
     for i in args:
@@ -12,7 +13,7 @@ async def base_keyb(*args):
     return builder.as_markup(resize_keyboard=True)
 
 
-async def inlines(**kwargs):
+async def inlines(**kwargs) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     
     for text, cbk_data in kwargs.items():

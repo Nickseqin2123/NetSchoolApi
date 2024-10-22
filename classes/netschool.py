@@ -1,11 +1,12 @@
+from typing import Self, Coroutine
 from hashlib import md5
-import requests
+import aiohttp
 
 
 class NetSchoolApi:
     __instance = None
     
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls, *args, **kwargs) -> Self:
         if cls.__instance is None:
             cls.__instance = super().__new__(cls)
         
@@ -18,40 +19,40 @@ class NetSchoolApi:
         self.__password = password
         self.headers = {}
     
-    def login(self) -> dict:
-        self._session = requests.Session()
-        self._school_id()
+    async def login(self) -> dict:
+        self._session = aiohttp.ClientSession()
+        await self._school_id()
         
-        req = self._session.post(f'{self.url}/webapi/auth/getdata')
+        req = await self._session.post(f'{self.url}/webapi/auth/getdata')
         
-        data: dict = self._config(req.json())
-        response_login = self._session.post(f'{self.url}/webapi/login', data=data)
+        data: dict = await self._config(await req.json())
+        response_login = await self._session.post(f'{self.url}/webapi/login', data=data)
     
-        result = response_login.json()
+        result = await response_login.json()
             
         if 'at' not in result:
             self.__class__.__instance = None
             return {'status': False, 'messag': 'Ошибка входа. Проверьте логин и пароль.'}
         
-        self._make_attrs(result)
+        await self._make_attrs(result)
         # self.logout()
         return {'status': True, 'messag': 'Вход прошёл успешно'}
         
-    def _school_id(self) -> int:
-        schools = self._session.get(f'{self.url}/webapi/schools/search')
+    async def _school_id(self) -> int:
+        schools = await self._session.get(f'{self.url}/webapi/schools/search')
         
-        for i in schools.json():
+        for i in await schools.json():
             if self.school == i['shortName']:
                 self.school_id = i['id']
                 break
     
-    def make_query_parametrs(self, url: str, **kwargs) -> str:
+    async def make_query_parametrs(self, url: str, **kwargs) -> str:
         params = [f'{key}={value}' for key, value in kwargs.items()]
         params_part = '&'.join(params)
         
         return f'{url}?{params_part}'
 
-    def _config(self, req_response_dict: dict) -> dict:
+    async def _config(self, req_response_dict: dict) -> dict:
         login_meta: dict = req_response_dict
         
         salt: str = login_meta.pop('salt')
@@ -70,7 +71,7 @@ class NetSchoolApi:
         }
         return data
 
-    def _config_mark(self, **kwargs):
+    async def _config_mark(self, **kwargs) -> dict:
         data: dict = {
             'selectedData': [
                 {'filterId': 'SID', 'filterText': self.name_surname, 'filterValue': self.student_id},
@@ -82,22 +83,22 @@ class NetSchoolApi:
         }
         return data
     
-    def _make_attrs(self, result: dict) -> None:
+    async def _make_attrs(self, result: dict) -> Coroutine:
         account_info = result['accountInfo']
         self.__at: str = result['at']
         self.student_id: int = account_info['user']['id']
         self.name_surname = account_info['user']['name']
         self.headers['At'] = self.__at
         
-        request_response = self._session.get(f'{self.url}/webapi/context', headers=self.headers)
+        request_response = await self._session.get(f'{self.url}/webapi/context', headers=self.headers)
         
-        resp_json = request_response.json()
+        resp_json = await request_response.json()
         self.schoolYearId = resp_json['schoolYearId']
     
-    def logout(self) -> None:
-        self._session.post(f'{self.url}/webapi/auth/logout', headers=self.headers)
-        self._session.close()
+    async def logout(self) -> Coroutine:
+        await self._session.post(f'{self.url}/webapi/auth/logout', headers=self.headers)
+        await self._session.close()
     
     @classmethod
-    def instance(cls):
+    def instance(cls) -> bool:
         return bool(cls.__instance)

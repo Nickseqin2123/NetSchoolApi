@@ -1,7 +1,8 @@
 import asyncio
 import logging
+from typing import Coroutine
 
-from aiogram import F, Bot, Dispatcher
+from aiogram import Bot, Dispatcher
 from aiogram.types import Message
 from aiogram.filters.command import CommandStart
 from main_router import router as main_router
@@ -16,7 +17,7 @@ dp.include_router(
 
 
 @dp.message(CommandStart())
-async def go(message: Message):
+async def go(message: Message) -> Coroutine:
     if User.instance():
         buttons = ('Дневник', 'Выход', 'Поддержка')
     else:
@@ -30,7 +31,7 @@ reply_markup=await base_keyb(*buttons)
     )
 
 
-async def main():
+async def main() -> Coroutine:
     logging.basicConfig(level=logging.INFO)
     bot = Bot('7249528198:AAFoiK-UvnkgTqtVq21vmCHvCvvLvi6yvo8')
     await dp.start_polling(bot)
